@@ -2,6 +2,8 @@
 
 A new Flutter project.
 
+# dit is de complete versie. incomplete zit in de branch final-commit-incomplete
+
 
 ## plan van aanpak:
  - maak eerst de homepagina en de settings pagina, want daar zit de minste logica in en is snel te doen
