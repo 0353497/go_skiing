@@ -20,6 +20,8 @@ A new Flutter project.
 - persistantly opgeslagen ranking niet, gebeurd alleen in de state management
 - slope draait wel, maar is buggy. en de snelheid verandert niet.
 - bomen zijn seamless, maar niet helemaal, is discutabel.
+- ben ook vergeten om bij de reset de coins te setten naar 10. dit was gewoon een domme fout.
+- ook heb ik de package name niet aangepast. omdat de vorige keer dat ik had gedaan kon ik er werkende apk meer van maken. dus heb ik besloten om dat bij de complete te checken en doen.
 
 
 ### waarom heb ik dit gemist:
