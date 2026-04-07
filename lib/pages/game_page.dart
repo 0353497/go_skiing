@@ -540,6 +540,7 @@ class _GamePageState extends State<GamePage>
     lastBoostAt = Duration.zero;
     lastTick = null;
     setState(() {});
+    backgroundPlayer.play();
     Get.back();
   }
 
