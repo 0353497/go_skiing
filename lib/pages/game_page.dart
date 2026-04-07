@@ -86,7 +86,6 @@ class _GamePageState extends State<GamePage>
         onLongPressCancel: () => endInvincable(),
         onPanUpdate: (details) {
           if (details.delta.dy > 8) {
-            print(details.delta.dy);
             startBoost();
             return;
           }
@@ -321,7 +320,7 @@ class _GamePageState extends State<GamePage>
       setState(() {
         isGameOver = true;
       });
-      scoreProvider.rankings.add(
+      scoreProvider.addRanking(
         Ranking(
           playerName: userProvider.name.value,
           coin: coins,
