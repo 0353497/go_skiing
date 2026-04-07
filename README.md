@@ -31,8 +31,13 @@ ik had beter een speed variable kunnen maken voor de slope en de bomen, maar dat
 
 ## compleet
  - de package name bleek heel makkelijk aan te passen, dus dat was geen probleem, nu weet ik dat!
+ - ook had ik de highlight niet bij de records pagina. 
  
 
  screen recording is niet toegevoegd. hier is waarom:
  voor screen recording heb ik een package nodig: 'https://pub.dev/packages/flutter_screen_recording'
  maar die package staat niet in de packages lijst en is ook niet populair of veel gebruikt. dat zorgt er ook voor dat het een kleine kas is dat die package wordt toegevoegt, of die goed werkt. hierdoor heb ik de beslissing genomen om dit niet te doen. als je daar anders naar kijkt. stuur dan een bericht.
+
+ ### totale tijd: 4 uur
+
+ ik moet wel zeggen dat ik best tevreden bent met wat heb ik bereikt binnen de 2.5 uur. vergeleken met anwb is dit een grote verbetering. maar is is nog altijd werk aan de winkel!
