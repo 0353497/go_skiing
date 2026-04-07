@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_instance/get_instance.dart';
 import 'package:get/route_manager.dart';
+import 'package:go_skiing/models/ranking.dart';
 import 'package:go_skiing/pages/homepage.dart';
 import 'package:go_skiing/providers/score_provider.dart';
 
 class RankingsPage extends StatefulWidget {
-  const RankingsPage({super.key});
+  const RankingsPage({super.key, this.highlightedRanking});
+
+  final Ranking? highlightedRanking;
 
   @override
   State<RankingsPage> createState() => _RankingsPageState();
@@ -81,8 +84,14 @@ class _RankingsPageState extends State<RankingsPage> {
                         child: ListView.builder(
                           itemCount: rankings.length,
                           itemBuilder: (context, index) {
+                            final ranking = rankings[index];
+                            final isHighlighted = _isHighlighted(ranking);
+
                             return Container(
                               decoration: BoxDecoration(
+                                color: isHighlighted
+                                    ? Colors.amber.withValues(alpha: 0.25)
+                                    : null,
                                 border: Border(
                                   bottom: BorderSide(
                                     width: 1,
@@ -90,15 +99,45 @@ class _RankingsPageState extends State<RankingsPage> {
                                   ),
                                 ),
                               ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 4,
+                              ),
                               child: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceAround,
                                 children: [
-                                  Text("${index + 1}"),
-                                  Text(rankings[index].playerName),
-                                  Text("${rankings[index].coin}"),
                                   Text(
-                                    "${rankings[index].duration.inSeconds} s",
+                                    "${index + 1}",
+                                    style: TextStyle(
+                                      fontWeight: isHighlighted
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                  Text(
+                                    ranking.playerName,
+                                    style: TextStyle(
+                                      fontWeight: isHighlighted
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                  Text(
+                                    "${ranking.coin}",
+                                    style: TextStyle(
+                                      fontWeight: isHighlighted
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                  Text(
+                                    "${ranking.duration.inSeconds} s",
+                                    style: TextStyle(
+                                      fontWeight: isHighlighted
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -114,5 +153,15 @@ class _RankingsPageState extends State<RankingsPage> {
         ),
       );
     });
+  }
+
+  bool _isHighlighted(Ranking ranking) {
+    final highlighted = widget.highlightedRanking;
+    if (highlighted == null) return false;
+
+    return identical(highlighted, ranking) ||
+        (highlighted.playerName == ranking.playerName &&
+            highlighted.coin == ranking.coin &&
+            highlighted.duration == ranking.duration);
   }
 }

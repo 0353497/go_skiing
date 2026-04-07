@@ -376,13 +376,13 @@ class _GamePageState extends State<GamePage>
     setState(() {
       isGameOver = true;
     });
-    scoreProvider.addRanking(
-      Ranking(
-        playerName: userProvider.name.value,
-        coin: coins,
-        duration: duration,
-      ),
+    final latestRanking = Ranking(
+      playerName: userProvider.name.value,
+      coin: coins,
+      duration: duration,
     );
+
+    scoreProvider.addRanking(latestRanking);
     gameOverPlayer.play();
 
     Get.dialog(
@@ -391,6 +391,7 @@ class _GamePageState extends State<GamePage>
         userProvider: userProvider,
         coins: coins,
         duration: duration,
+        latestRanking: latestRanking,
         onReset: restart,
       ),
     );

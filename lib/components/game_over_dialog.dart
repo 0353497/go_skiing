@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:go_skiing/models/ranking.dart';
 import 'package:go_skiing/pages/rankings_page.dart';
 import 'package:go_skiing/providers/user_provider.dart';
 
@@ -9,6 +10,7 @@ class GameOverDialog extends StatelessWidget {
     required this.userProvider,
     required this.coins,
     required this.duration,
+    required this.latestRanking,
     required this.onReset,
   });
   final VoidCallback onReset;
@@ -16,6 +18,7 @@ class GameOverDialog extends StatelessWidget {
   final UserProvider userProvider;
   final int coins;
   final Duration duration;
+  final Ranking latestRanking;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +59,9 @@ class GameOverDialog extends StatelessWidget {
                 children: [
                   InkWell(onTap: onReset, child: Text("Restart")),
                   InkWell(
-                    onTap: () => Get.to(() => RankingsPage()),
+                    onTap: () => Get.to(
+                      () => RankingsPage(highlightedRanking: latestRanking),
+                    ),
                     child: Text("Go To Rankings"),
                   ),
                 ],
