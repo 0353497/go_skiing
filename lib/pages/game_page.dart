@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:go_skiing/components/game_over_dialog.dart';
+import 'package:go_skiing/components/top_right_bar.dart';
+import 'package:go_skiing/components/trees.dart';
 import 'package:go_skiing/models/ranking.dart';
 import 'package:go_skiing/pages/homepage.dart';
-import 'package:go_skiing/pages/rankings_page.dart';
 import 'package:go_skiing/providers/score_provider.dart';
 import 'package:go_skiing/providers/user_provider.dart';
 import 'package:just_audio/just_audio.dart';
@@ -69,6 +71,8 @@ class _GamePageState extends State<GamePage>
 
   double get slopeStrength => angle.abs().clamp(0.0, 1.0);
 
+  double get slopeBaseY => Get.height - 88;
+
   Alignment get slopeRotationAlignment {
     final playerCenterX = playerRect.left + (playerRect.width / 2);
     final normalizedX = ((playerCenterX / Get.width) * 2 - 1).clamp(-1.0, 1.0);
@@ -116,7 +120,7 @@ class _GamePageState extends State<GamePage>
             startBoost();
             return;
           }
-          if (details.delta.dx < -5) {
+          if (details.delta.dx > 5) {
             pauseGame();
             Get.dialog(
               Dialog(
@@ -441,7 +445,7 @@ class _GamePageState extends State<GamePage>
   Rect _placeOnSlope(Rect rect, double verticalOffset) {
     final playerCenterX = playerRect.left + (playerRect.width / 2);
     final objectCenterX = rect.left + (rect.width / 2);
-    final baseY = playerRect.bottom - 8;
+    final baseY = slopeBaseY;
     final centerY =
         baseY +
         math.tan(angle) * (objectCenterX - playerCenterX) +
@@ -524,6 +528,7 @@ class _GamePageState extends State<GamePage>
     isGameOver = false;
     isPaused = false;
     speed = 5;
+    coins = 10;
     angle = 0.2;
     coinsRect.clear();
     for (var i = 0; i < 3; i++) {
@@ -549,159 +554,5 @@ class _GamePageState extends State<GamePage>
 
   void endInvincable() {
     isInvincable = false;
-  }
-}
-
-class GameOverDialog extends StatelessWidget {
-  const GameOverDialog({
-    super.key,
-    required this.userProvider,
-    required this.coins,
-    required this.duration,
-    required this.onReset,
-  });
-  final VoidCallback onReset;
-
-  final UserProvider userProvider;
-  final int coins;
-  final Duration duration;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: SizedBox(
-        width: Get.width * .8,
-        height: Get.height * .5,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Text("Game Over"),
-              Text("Player name: ${userProvider.name.value}"),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 12,
-                children: [
-                  SizedBox(
-                    height: 24,
-                    child: Image.asset("assets/images/coin.png"),
-                  ),
-                  Text(
-                    "$coins",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.yellow,
-                    ),
-                  ),
-                ],
-              ),
-              Text("Time: ${duration.inSeconds} s"),
-              Row(
-                spacing: 24,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  InkWell(onTap: onReset, child: Text("Restart")),
-                  InkWell(
-                    onTap: () => Get.to(() => RankingsPage()),
-                    child: Text("Go To Rankings"),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class TopRightBar extends StatelessWidget {
-  const TopRightBar({
-    super.key,
-    required this.userProvider,
-    required this.coins,
-    required this.duration,
-  });
-
-  final UserProvider userProvider;
-  final int coins;
-  final Duration duration;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      right: 24,
-      top: 24,
-      child: Column(
-        spacing: 12,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            userProvider.name.value,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 12,
-            children: [
-              SizedBox(
-                height: 24,
-                child: Image.asset("assets/images/coin.png"),
-              ),
-              Text(
-                "$coins",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.yellow,
-                ),
-              ),
-            ],
-          ),
-          Text(
-            "${duration.inSeconds} s",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class Trees extends StatelessWidget {
-  Trees({super.key, required this.animationSpeed, required this.isPaused});
-  final Duration animationSpeed;
-  final bool isPaused;
-  final Tween<double> movingTrees = Tween(begin: 0, end: -Get.width);
-
-  @override
-  Widget build(BuildContext context) {
-    return RepeatingAnimationBuilder(
-      paused: isPaused,
-      animatable: movingTrees,
-      duration: animationSpeed,
-      builder: (context, value, child) {
-        return Stack(
-          children: [
-            Positioned(
-              bottom: 0,
-              left: value + Get.width,
-              child: Image.asset("assets/images/trees.png", scale: 2),
-            ),
-            Positioned(
-              bottom: 0,
-              left: value - Get.width,
-              child: Image.asset("assets/images/trees.png", scale: 2),
-            ),
-            Positioned(
-              bottom: 0,
-              left: value,
-              child: Image.asset("assets/images/trees.png", scale: 2),
-            ),
-          ],
-        );
-      },
-    );
   }
 }
