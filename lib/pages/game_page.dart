@@ -22,6 +22,10 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage>
     with SingleTickerProviderStateMixin {
   bool isGameOver = false;
+  double speed = 5;
+  final double boostMultiplier = 3;
+  final Duration boostDuration = 2.seconds;
+  final Duration boostCooldown = 1.seconds;
   final ScoreProvider scoreProvider = Get.find<ScoreProvider>();
   final userProvider = Get.find<UserProvider>();
   Duration pauseDur = Duration.zero;
@@ -46,6 +50,17 @@ class _GamePageState extends State<GamePage>
   List<bool> showCoins = List.generate(3, (_) => true);
   Rect obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height - 100, 32, 32);
   Duration lastSpawn = Duration.zero;
+  Duration boostUntil = Duration.zero;
+  Duration lastBoostAt = Duration.zero;
+
+  bool get isBoosting => duration < boostUntil;
+
+  double get activeSpeed => isBoosting ? speed * boostMultiplier : speed;
+
+  Duration get treeAnimationSpeed {
+    final normalizedSpeed = (activeSpeed / 5).clamp(0.5, 3.0);
+    return Duration(milliseconds: (3000 / normalizedSpeed).round());
+  }
 
   @override
   void initState() {
@@ -70,7 +85,12 @@ class _GamePageState extends State<GamePage>
         onLongPressEnd: (_) => endInvincable(),
         onLongPressCancel: () => endInvincable(),
         onPanUpdate: (details) {
-          if (details.delta.direction < 5) {
+          if (details.delta.dy > 8) {
+            print(details.delta.dy);
+            startBoost();
+            return;
+          }
+          if (details.delta.dx < -5) {
             pauseGame();
             Get.dialog(
               Dialog(
@@ -144,7 +164,7 @@ class _GamePageState extends State<GamePage>
               child: Image.asset("assets/images/bg.jpg", fit: BoxFit.cover),
             ),
             Trees(
-              animationSpeed: (3 - (angle * 2)).seconds,
+              animationSpeed: treeAnimationSpeed,
               isPaused: isPaused || isGameOver,
             ),
 
@@ -260,8 +280,7 @@ class _GamePageState extends State<GamePage>
 
   void onTick(Duration dur) {
     duration = pauseDur + dur;
-    double moveSpeed = 5;
-    moveObstacles(moveSpeed);
+    moveObstacles(activeSpeed);
 
     handleRespawn();
     handleInvinsable();
@@ -355,6 +374,13 @@ class _GamePageState extends State<GamePage>
     }
   }
 
+  void startBoost() {
+    if (isBoosting) return;
+    if (duration - lastBoostAt < boostCooldown) return;
+    lastBoostAt = duration;
+    boostUntil = duration + boostDuration;
+  }
+
   void jump() async {
     if (!isGameOver || !isPaused) {
       setState(() {
@@ -412,6 +438,8 @@ class _GamePageState extends State<GamePage>
     }
     obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height - 180, 32, 32);
     lastSpawn = Duration.zero;
+    boostUntil = Duration.zero;
+    lastBoostAt = Duration.zero;
     setState(() {});
     Get.back();
   }
@@ -553,7 +581,7 @@ class Trees extends StatelessWidget {
     return RepeatingAnimationBuilder(
       paused: isPaused,
       animatable: movingTrees,
-      duration: 3.seconds,
+      duration: animationSpeed,
       builder: (context, value, child) {
         return Stack(
           children: [
