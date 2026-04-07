@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_instance/get_instance.dart';
-import 'package:get/route_manager.dart';
 import 'package:go_skiing/models/ranking.dart';
 import 'package:go_skiing/pages/homepage.dart';
 import 'package:go_skiing/providers/score_provider.dart';

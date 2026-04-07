@@ -20,7 +20,7 @@ class ScoreProvider extends GetxController {
     rankingList.sort(
       (a, b) => a.duration.inMilliseconds.compareTo(b.duration.inMilliseconds),
     );
-    return rankingList;
+    return rankingList.reversed.toList();
   }
 
   Future<void> addRanking(Ranking ranking) async {

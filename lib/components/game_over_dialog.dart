@@ -25,15 +25,21 @@ class GameOverDialog extends StatelessWidget {
     return Dialog(
       child: SizedBox(
         width: Get.width * .8,
-        height: Get.height * .5,
+        height: Get.height * .3,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Text("Game Over"),
-              Text("Player name: ${userProvider.name.value}"),
+              Text(
+                "Game Over",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+              ),
+              Text(
+                "Player name: ${userProvider.name.value}",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+              ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 spacing: 12,
@@ -52,17 +58,35 @@ class GameOverDialog extends StatelessWidget {
                   ),
                 ],
               ),
-              Text("Time: ${duration.inSeconds} s"),
+              Text(
+                "Time: ${duration.inSeconds} s",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
               Row(
                 spacing: 24,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  InkWell(onTap: onReset, child: Text("Restart")),
+                  InkWell(
+                    onTap: onReset,
+                    child: Text(
+                      "Restart",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
                   InkWell(
                     onTap: () => Get.to(
                       () => RankingsPage(highlightedRanking: latestRanking),
                     ),
-                    child: Text("Go To Rankings"),
+                    child: Text(
+                      "Go To Rankings",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
                   ),
                 ],
               ),
