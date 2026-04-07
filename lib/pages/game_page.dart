@@ -30,6 +30,8 @@ class _GamePageState extends State<GamePage>
   bool isPaused = false;
   int coins = 10;
   Duration duration = Duration.zero;
+  bool isInvincable = true;
+  Duration lastInvincableCoinUsed = Duration.zero;
   AudioPlayer backgroundPlayer = AudioPlayer();
   AudioPlayer jumpPlayer = AudioPlayer();
   AudioPlayer gameOverPlayer = AudioPlayer();
@@ -42,7 +44,7 @@ class _GamePageState extends State<GamePage>
     (_) => Rect.fromLTWH(Get.width, Get.height - 180, 32, 32),
   );
   List<bool> showCoins = List.generate(3, (_) => true);
-  Rect obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height - 180, 32, 32);
+  Rect obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height - 100, 32, 32);
   Duration lastSpawn = Duration.zero;
 
   @override
@@ -64,6 +66,9 @@ class _GamePageState extends State<GamePage>
   Widget build(BuildContext context) {
     return Scaffold(
       body: GestureDetector(
+        onLongPressDown: (_) => startInvincable(),
+        onLongPressEnd: (_) => endInvincable(),
+        onLongPressCancel: () => endInvincable(),
         onPanUpdate: (details) {
           if (details.delta.direction < 5) {
             pauseGame();
@@ -138,7 +143,10 @@ class _GamePageState extends State<GamePage>
             Positioned.fill(
               child: Image.asset("assets/images/bg.jpg", fit: BoxFit.cover),
             ),
-            Trees(animationSpeed: 3.seconds, isPaused: isPaused || isGameOver),
+            Trees(
+              animationSpeed: (3 - (angle * 2)).seconds,
+              isPaused: isPaused || isGameOver,
+            ),
 
             TopRightBar(
               userProvider: userProvider,
@@ -167,10 +175,12 @@ class _GamePageState extends State<GamePage>
                 child: ShaderMask(
                   shaderCallback: (bounds) {
                     return LinearGradient(
-                      colors: [
-                        userProvider.color.value,
-                        userProvider.color.value,
-                      ],
+                      colors: isInvincable
+                          ? [Colors.black, Colors.black]
+                          : [
+                              userProvider.color.value,
+                              userProvider.color.value,
+                            ],
                     ).createShader(bounds);
                   },
                   child: Image.asset("assets/images/skiing_person.png"),
@@ -254,8 +264,26 @@ class _GamePageState extends State<GamePage>
     moveObstacles(moveSpeed);
 
     handleRespawn();
+    handleInvinsable();
 
     handleObstacleCollsion();
+    handlleCoinCollision();
+
+    setState(() {});
+  }
+
+  void handleInvinsable() {
+    if (isInvincable && lastInvincableCoinUsed.inSeconds < duration.inSeconds) {
+      lastInvincableCoinUsed = duration;
+      if (coins > 0) {
+        coins--;
+      } else {
+        isInvincable = false;
+      }
+    }
+  }
+
+  void handlleCoinCollision() {
     for (var i = 0; i < coinsRect.length; i++) {
       final coin = coinsRect[i];
       if (coin.overlaps(playerRect) && showCoins[i]) {
@@ -264,11 +292,10 @@ class _GamePageState extends State<GamePage>
         coins++;
       }
     }
-    setState(() {});
   }
 
   void handleObstacleCollsion() {
-    if (playerRect.overlaps(obstacleRect)) {
+    if (playerRect.overlaps(obstacleRect) && !isInvincable) {
       _ticker.stop();
       setState(() {
         isGameOver = true;
@@ -298,7 +325,7 @@ class _GamePageState extends State<GamePage>
       isObstacle = !isObstacle;
       if (isObstacle) {
         if (obstacleRect.left < 0) {
-          obstacleRect = Rect.fromLTWH(Get.width, Get.height - 180, 32, 32);
+          obstacleRect = Rect.fromLTWH(Get.width, Get.height - 100, 32, 32);
         }
       } else {
         if (coinsRect.any((rect) => rect.left < 0)) {
@@ -308,7 +335,7 @@ class _GamePageState extends State<GamePage>
 
             coinsRect[i] = Rect.fromLTWH(
               Get.width + (32 * i) + (spacing * i),
-              Get.height - 180,
+              Get.height - 100,
               32,
               32,
             );
@@ -320,7 +347,7 @@ class _GamePageState extends State<GamePage>
   }
 
   void moveObstacles(double moveSpeed) {
-    obstacleRect = obstacleRect.shift(Offset(-moveSpeed, 0));
+    obstacleRect = obstacleRect.shift(Offset(-moveSpeed, -(moveSpeed * .2)));
     for (var i = 0; i < coinsRect.length; i++) {
       coinsRect[i] = coinsRect[i].shift(Offset(-moveSpeed, 0));
     }
@@ -385,6 +412,14 @@ class _GamePageState extends State<GamePage>
     lastSpawn = Duration.zero;
     setState(() {});
     Get.back();
+  }
+
+  void startInvincable() {
+    isInvincable = true;
+  }
+
+  void endInvincable() {
+    isInvincable = false;
   }
 }
 
