@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:go_skiing/models/ranking.dart';
+import 'package:go_skiing/pages/rankings_page.dart';
+import 'package:go_skiing/providers/score_provider.dart';
 import 'package:go_skiing/providers/user_provider.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -17,7 +20,10 @@ class GamePage extends StatefulWidget {
 
 class _GamePageState extends State<GamePage>
     with SingleTickerProviderStateMixin {
+  bool isGameOver = false;
+  final ScoreProvider scoreProvider = Get.find<ScoreProvider>();
   final userProvider = Get.find<UserProvider>();
+  Duration pauseDur = Duration.zero;
   Rect playerRect = Rect.fromLTWH(Get.width * .3, Get.height - 180, 100, 100);
   double angle = .2;
   bool isPaused = false;
@@ -29,6 +35,14 @@ class _GamePageState extends State<GamePage>
   AudioPlayer coinPlayer = AudioPlayer();
   late Ticker _ticker;
   late final StreamSubscription gyroStream;
+  bool isObstacle = true;
+  final List<Rect> coinsRect = List.generate(
+    3,
+    (_) => Rect.fromLTWH(Get.width, Get.height - 180, 32, 32),
+  );
+  List<bool> showCoins = List.generate(3, (_) => true);
+  Rect obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height - 180, 32, 32);
+  Duration lastSpawn = Duration.zero;
 
   @override
   void initState() {
@@ -55,15 +69,8 @@ class _GamePageState extends State<GamePage>
             Positioned.fill(
               child: Image.asset("assets/images/bg.jpg", fit: BoxFit.cover),
             ),
-            Trees(animationSpeed: 3.seconds, isPaused: isPaused),
-            Positioned(
-              top: 24,
-              left: 24,
-              child: IconButton(
-                onPressed: () {},
-                icon: Icon(isPaused ? Icons.play_arrow : Icons.pause),
-              ),
-            ),
+            Trees(animationSpeed: 3.seconds, isPaused: isPaused || isGameOver),
+
             TopRightBar(
               userProvider: userProvider,
               coins: coins,
@@ -101,6 +108,59 @@ class _GamePageState extends State<GamePage>
                 ),
               ),
             ),
+            for (int i = 0; i < coinsRect.length; i++)
+              if (showCoins[i])
+                if (!isObstacle)
+                  Positioned(
+                    top: coinsRect[i].top,
+                    left: coinsRect[i].left,
+                    width: coinsRect[i].width,
+                    height: coinsRect[i].height,
+                    child: Image.asset("assets/images/coin.png"),
+                  ),
+            if (isObstacle)
+              Positioned(
+                top: obstacleRect.top,
+                left: obstacleRect.left,
+                width: obstacleRect.width,
+                height: obstacleRect.height,
+                child: Transform.rotate(
+                  angle: angle,
+                  child: Image.asset("assets/images/obstacle.png"),
+                ),
+              ),
+
+            if (isPaused)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Text(
+                      "Game suspended...",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            Positioned(
+              top: 24,
+              left: 24,
+              child: IconButton(
+                onPressed: () {
+                  if (isPaused) {
+                    unPause();
+                  } else {
+                    pauseGame();
+                  }
+                },
+                icon: Icon(isPaused ? Icons.play_arrow : Icons.pause),
+              ),
+            ),
           ],
         ),
       ),
@@ -120,14 +180,88 @@ class _GamePageState extends State<GamePage>
   }
 
   void onTick(Duration dur) {
-    duration = dur;
+    duration = pauseDur + dur;
+    double moveSpeed = 5;
+    moveObstacles(moveSpeed);
+
+    handleRespawn();
+
+    handleObstacleCollsion();
+    for (var i = 0; i < coinsRect.length; i++) {
+      final coin = coinsRect[i];
+      if (coin.overlaps(playerRect) && showCoins[i]) {
+        coinPlayer.play();
+        showCoins[i] = false;
+        coins++;
+      }
+    }
     setState(() {});
+  }
+
+  void handleObstacleCollsion() {
+    if (playerRect.overlaps(obstacleRect)) {
+      _ticker.stop();
+      setState(() {
+        isGameOver = true;
+      });
+      scoreProvider.rankings.add(
+        Ranking(
+          playerName: userProvider.name.value,
+          coin: coins,
+          duration: duration,
+        ),
+      );
+      gameOverPlayer.play();
+
+      Get.dialog(
+        GameOverDialog(
+          userProvider: userProvider,
+          coins: coins,
+          duration: duration,
+          onReset: restart,
+        ),
+      );
+    }
+  }
+
+  void handleRespawn() {
+    if (lastSpawn.inSeconds + 3 < duration.inSeconds) {
+      isObstacle = !isObstacle;
+      if (isObstacle) {
+        if (obstacleRect.left < 0) {
+          obstacleRect = Rect.fromLTWH(Get.width, Get.height - 180, 32, 32);
+        }
+      } else {
+        if (coinsRect.any((rect) => rect.left < 0)) {
+          for (var i = 0; i < coinsRect.length; i++) {
+            double spacing = 12;
+            showCoins[i] = true;
+
+            coinsRect[i] = Rect.fromLTWH(
+              Get.width + (32 * i) + (spacing * i),
+              Get.height - 180,
+              32,
+              32,
+            );
+          }
+        }
+      }
+      lastSpawn = duration;
+    }
+  }
+
+  void moveObstacles(double moveSpeed) {
+    obstacleRect = obstacleRect.shift(Offset(-moveSpeed, 0));
+    for (var i = 0; i < coinsRect.length; i++) {
+      coinsRect[i] = coinsRect[i].shift(Offset(-moveSpeed, 0));
+    }
   }
 
   void jump() async {
     setState(() {
       playerRect = playerRect.shift(Offset(0, -Get.width * .5));
     });
+    jumpPlayer.play();
     await Future.delayed(1.seconds);
     if (mounted) {
       setState(() {
@@ -141,6 +275,104 @@ class _GamePageState extends State<GamePage>
     if (!angle.isNegative) {
       angle = newAgle;
     }
+  }
+
+  void pauseGame() {
+    pauseDur = duration;
+    _ticker.stop();
+    backgroundPlayer.stop();
+    setState(() {
+      isPaused = true;
+    });
+  }
+
+  void unPause() {
+    duration = pauseDur;
+    _ticker.start();
+    backgroundPlayer.play();
+    setState(() {
+      isPaused = false;
+    });
+  }
+
+  void restart() {
+    _ticker.stop();
+    _ticker.start();
+    isGameOver = false;
+    isPaused = false;
+    coinsRect.clear();
+    for (var i = 0; i < 3; i++) {
+      coinsRect.add(Rect.fromLTWH(Get.width, Get.height - 180, 32, 32));
+      showCoins[i] = true;
+    }
+    obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height - 180, 32, 32);
+    lastSpawn = Duration.zero;
+    setState(() {});
+    Get.back();
+  }
+}
+
+class GameOverDialog extends StatelessWidget {
+  const GameOverDialog({
+    super.key,
+    required this.userProvider,
+    required this.coins,
+    required this.duration,
+    required this.onReset,
+  });
+  final VoidCallback onReset;
+
+  final UserProvider userProvider;
+  final int coins;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: SizedBox(
+        width: Get.width * .8,
+        height: Get.height * .5,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Text("Game Over"),
+              Text("Player name: ${userProvider.name.value}"),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 12,
+                children: [
+                  SizedBox(
+                    height: 24,
+                    child: Image.asset("assets/images/coin.png"),
+                  ),
+                  Text(
+                    "$coins",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.yellow,
+                    ),
+                  ),
+                ],
+              ),
+              Text("Time: ${duration.inSeconds}"),
+              Row(
+                spacing: 24,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  InkWell(onTap: onReset, child: Text("Restart")),
+                  InkWell(
+                    onTap: () => Get.to(() => RankingsPage()),
+                    child: Text("Go To Rankings"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
