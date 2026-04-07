@@ -13,4 +13,15 @@ A new Flutter project.
  - daarna kan ik de score toevoegen met de ranking als alles lukt,
  - als ik nog tijd over heb de screen recording maar denk niet dat dat gaat lukken.
 
- 
+ ## einde opdracht binnen tijd
+### missende punten:
+- geen screen recording
+- geen boost op swipe down
+- persistantly opgeslagen ranking niet, gebeurd alleen in de state management
+- slope draait wel, maar is buggy. en de snelheid verandert niet.
+- bomen zijn seamless, maar niet helemaal, is discutabel.
+
+
+### waarom heb ik dit gemist:
+screen recording is uitdagend, en had er uit eindelijk geen tijd meer voor.
+ik had beter een speed variable kunnen maken voor de slope en de bomen, maar dat werd lastig in mijn huidige implementatie. omdat ik eerst de bomen had gemaakt, volgens de planning. maar toen nog niet rekening gehouden met de snelheid.
