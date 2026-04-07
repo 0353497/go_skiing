@@ -30,7 +30,7 @@ class _GamePageState extends State<GamePage>
   bool isPaused = false;
   int coins = 10;
   Duration duration = Duration.zero;
-  bool isInvincable = true;
+  bool isInvincable = false;
   Duration lastInvincableCoinUsed = Duration.zero;
   AudioPlayer backgroundPlayer = AudioPlayer();
   AudioPlayer jumpPlayer = AudioPlayer();
@@ -296,6 +296,8 @@ class _GamePageState extends State<GamePage>
 
   void handleObstacleCollsion() {
     if (playerRect.overlaps(obstacleRect) && !isInvincable) {
+      HapticFeedback.heavyImpact();
+      backgroundPlayer.stop();
       _ticker.stop();
       setState(() {
         isGameOver = true;
