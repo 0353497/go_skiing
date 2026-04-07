@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:go_skiing/models/ranking.dart';
+import 'package:go_skiing/pages/homepage.dart';
 import 'package:go_skiing/pages/rankings_page.dart';
 import 'package:go_skiing/providers/score_provider.dart';
 import 'package:go_skiing/providers/user_provider.dart';
@@ -63,6 +64,74 @@ class _GamePageState extends State<GamePage>
   Widget build(BuildContext context) {
     return Scaffold(
       body: GestureDetector(
+        onPanUpdate: (details) {
+          if (details.delta.direction < 5) {
+            pauseGame();
+            Get.dialog(
+              Dialog(
+                child: SizedBox(
+                  width: Get.width * .8,
+                  height: Get.height * .4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Text("The game is in progress. Are you sure to quit?"),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            SizedBox(
+                              width: Get.width * .3,
+                              height: 60,
+                              child: ElevatedButton(
+                                style: ButtonStyle(
+                                  shape: WidgetStatePropertyAll(
+                                    RoundedRectangleBorder(),
+                                  ),
+                                  backgroundColor: WidgetStatePropertyAll(
+                                    Color(0xff9dd4fa),
+                                  ),
+                                  foregroundColor: WidgetStatePropertyAll(
+                                    Colors.black,
+                                  ),
+                                ),
+                                onPressed: () => Get.to(() => Homepage()),
+                                child: Text("Yes"),
+                              ),
+                            ),
+                            SizedBox(
+                              width: Get.width * .3,
+                              height: 60,
+                              child: ElevatedButton(
+                                style: ButtonStyle(
+                                  shape: WidgetStatePropertyAll(
+                                    RoundedRectangleBorder(),
+                                  ),
+                                  backgroundColor: WidgetStatePropertyAll(
+                                    Color(0xff9dd4fa),
+                                  ),
+                                  foregroundColor: WidgetStatePropertyAll(
+                                    Colors.black,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Get.back();
+                                  unPause();
+                                },
+                                child: Text("No"),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+        },
         onTap: () => jump(),
         child: Stack(
           children: [
@@ -258,15 +327,22 @@ class _GamePageState extends State<GamePage>
   }
 
   void jump() async {
-    setState(() {
-      playerRect = playerRect.shift(Offset(0, -Get.width * .5));
-    });
-    jumpPlayer.play();
-    await Future.delayed(1.seconds);
-    if (mounted) {
+    if (!isGameOver || !isPaused) {
       setState(() {
-        playerRect = Rect.fromLTWH(Get.width * .3, Get.height - 180, 100, 100);
+        playerRect = playerRect.shift(Offset(0, -Get.width * .5));
       });
+      jumpPlayer.play();
+      await Future.delayed(1.seconds);
+      if (mounted) {
+        setState(() {
+          playerRect = Rect.fromLTWH(
+            Get.width * .3,
+            Get.height - 180,
+            100,
+            100,
+          );
+        });
+      }
     }
   }
 
