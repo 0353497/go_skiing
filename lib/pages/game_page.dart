@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -23,18 +24,25 @@ class _GamePageState extends State<GamePage>
     with SingleTickerProviderStateMixin {
   bool isGameOver = false;
   double speed = 5;
+  final double maxSpeed = 14;
   final double boostMultiplier = 3;
+  final double flatSlopeThreshold = 0.12;
+  final double flatFriction = 1.8;
+  final double slopeAcceleration = 3.0;
+  final double minSlopeAngle = 0;
+  final double maxSlopeAngle = 0.85;
+  final double slopeSensitivity = 0.02;
   final Duration boostDuration = 2.seconds;
   final Duration boostCooldown = 1.seconds;
   final ScoreProvider scoreProvider = Get.find<ScoreProvider>();
   final userProvider = Get.find<UserProvider>();
   Duration pauseDur = Duration.zero;
   Rect playerRect = Rect.fromLTWH(Get.width * .3, Get.height - 180, 100, 100);
-  double angle = .2;
+  double angle = 0.2;
   bool isPaused = false;
   int coins = 10;
   Duration duration = Duration.zero;
-  bool isInvincable = false;
+  bool isInvincable = true;
   Duration lastInvincableCoinUsed = Duration.zero;
   AudioPlayer backgroundPlayer = AudioPlayer();
   AudioPlayer jumpPlayer = AudioPlayer();
@@ -48,17 +56,36 @@ class _GamePageState extends State<GamePage>
     (_) => Rect.fromLTWH(Get.width, Get.height - 180, 32, 32),
   );
   List<bool> showCoins = List.generate(3, (_) => true);
-  Rect obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height - 100, 32, 32);
+  Rect obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height, 32, 32);
   Duration lastSpawn = Duration.zero;
   Duration boostUntil = Duration.zero;
   Duration lastBoostAt = Duration.zero;
+  Duration? lastTick;
+  final math.Random random = math.Random();
+  final List<double> coinSlopeOffsets = List.generate(3, (_) => 0.0);
+  double obstacleSlopeOffset = 0;
 
   bool get isBoosting => duration < boostUntil;
+
+  double get slopeStrength => angle.abs().clamp(0.0, 1.0);
+
+  Alignment get slopeRotationAlignment {
+    final playerCenterX = playerRect.left + (playerRect.width / 2);
+    final normalizedX = ((playerCenterX / Get.width) * 2 - 1).clamp(-1.0, 1.0);
+    return Alignment(normalizedX, 1.0);
+  }
 
   double get activeSpeed => isBoosting ? speed * boostMultiplier : speed;
 
   Duration get treeAnimationSpeed {
-    final normalizedSpeed = (activeSpeed / 5).clamp(0.5, 3.0);
+    final slopeRange = (maxSlopeAngle - flatSlopeThreshold).clamp(0.01, 1.0);
+    final normalizedSlope = ((slopeStrength - flatSlopeThreshold) / slopeRange)
+        .clamp(0.0, 1.0);
+    final slopeVisualMultiplier = 0.8 + (normalizedSlope * 1.4);
+    final normalizedSpeed = ((activeSpeed / 5) * slopeVisualMultiplier).clamp(
+      0.2,
+      3.5,
+    );
     return Duration(milliseconds: (3000 / normalizedSpeed).round());
   }
 
@@ -172,13 +199,18 @@ class _GamePageState extends State<GamePage>
               coins: coins,
               duration: duration,
             ),
+
             Positioned(
+              left: -Get.width * 0.25,
               bottom: -50,
               height: 100,
               child: Transform.rotate(
                 angle: angle,
+                alignment: slopeRotationAlignment,
                 child: Transform.scale(
-                  scale: 1.2,
+                  scaleY: 1.7,
+                  scaleX: 1.2,
+                  origin: Offset(0, -angle * 50),
                   child: Container(width: Get.width * 1.5, color: Colors.white),
                 ),
               ),
@@ -278,8 +310,21 @@ class _GamePageState extends State<GamePage>
   }
 
   void onTick(Duration dur) {
+    final previousTick = lastTick;
+    lastTick = dur;
+    final delta = previousTick == null ? Duration.zero : dur - previousTick;
+    final deltaSeconds = delta.inMicroseconds / Duration.microsecondsPerSecond;
+    final frameFactor = deltaSeconds * 60;
+
     duration = pauseDur + dur;
-    moveObstacles(activeSpeed);
+    updateSpeedFromSlope(deltaSeconds);
+
+    if (speed <= 0.01) {
+      endRun("You lost all your speed on the flat slope.");
+      return;
+    }
+
+    moveObstacles(activeSpeed * frameFactor);
 
     handleRespawn();
     handleInvinsable();
@@ -314,30 +359,37 @@ class _GamePageState extends State<GamePage>
 
   void handleObstacleCollsion() {
     if (playerRect.overlaps(obstacleRect) && !isInvincable) {
-      HapticFeedback.heavyImpact();
-      backgroundPlayer.stop();
-      _ticker.stop();
-      setState(() {
-        isGameOver = true;
-      });
-      scoreProvider.addRanking(
-        Ranking(
-          playerName: userProvider.name.value,
-          coin: coins,
-          duration: duration,
-        ),
-      );
-      gameOverPlayer.play();
-
-      Get.dialog(
-        GameOverDialog(
-          userProvider: userProvider,
-          coins: coins,
-          duration: duration,
-          onReset: restart,
-        ),
-      );
+      endRun("You hit an obstacle.");
     }
+  }
+
+  void endRun(String message) {
+    if (isGameOver) return;
+
+    HapticFeedback.heavyImpact();
+    backgroundPlayer.stop();
+    _ticker.stop();
+    setState(() {
+      isGameOver = true;
+    });
+    scoreProvider.addRanking(
+      Ranking(
+        playerName: userProvider.name.value,
+        coin: coins,
+        duration: duration,
+      ),
+    );
+    gameOverPlayer.play();
+
+    Get.dialog(
+      barrierDismissible: false,
+      GameOverDialog(
+        userProvider: userProvider,
+        coins: coins,
+        duration: duration,
+        onReset: restart,
+      ),
+    );
   }
 
   void handleRespawn() {
@@ -345,7 +397,11 @@ class _GamePageState extends State<GamePage>
       isObstacle = !isObstacle;
       if (isObstacle) {
         if (obstacleRect.left < 0) {
-          obstacleRect = Rect.fromLTWH(Get.width, Get.height - 100, 32, 32);
+          obstacleSlopeOffset = random.nextDouble() * 22 - 11;
+          obstacleRect = _placeOnSlope(
+            Rect.fromLTWH(Get.width, obstacleRect.top, 32, 32),
+            obstacleSlopeOffset,
+          );
         }
       } else {
         if (coinsRect.any((rect) => rect.left < 0)) {
@@ -353,11 +409,14 @@ class _GamePageState extends State<GamePage>
             double spacing = 12;
             showCoins[i] = true;
 
-            coinsRect[i] = Rect.fromLTWH(
-              Get.width + (32 * i) + (spacing * i),
-              Get.height - 100,
-              32,
-              32,
+            coinsRect[i] = _placeOnSlope(
+              Rect.fromLTWH(
+                Get.width + (32 * i) + (spacing * i),
+                coinsRect[i].top,
+                32,
+                32,
+              ),
+              coinSlopeOffsets[i],
             );
           }
         }
@@ -367,10 +426,44 @@ class _GamePageState extends State<GamePage>
   }
 
   void moveObstacles(double moveSpeed) {
-    obstacleRect = obstacleRect.shift(Offset(-moveSpeed, -(moveSpeed * .2)));
+    obstacleRect = _placeOnSlope(
+      obstacleRect.shift(Offset(-moveSpeed, 0)),
+      obstacleSlopeOffset,
+    );
     for (var i = 0; i < coinsRect.length; i++) {
-      coinsRect[i] = coinsRect[i].shift(Offset(-moveSpeed, 0));
+      coinsRect[i] = _placeOnSlope(
+        coinsRect[i].shift(Offset(-moveSpeed, 0)),
+        coinSlopeOffsets[i],
+      );
     }
+  }
+
+  Rect _placeOnSlope(Rect rect, double verticalOffset) {
+    final playerCenterX = playerRect.left + (playerRect.width / 2);
+    final objectCenterX = rect.left + (rect.width / 2);
+    final baseY = playerRect.bottom - 8;
+    final centerY =
+        baseY +
+        math.tan(angle) * (objectCenterX - playerCenterX) +
+        verticalOffset;
+    return Rect.fromLTWH(
+      rect.left,
+      centerY - (rect.height / 2),
+      rect.width,
+      rect.height,
+    );
+  }
+
+  void updateSpeedFromSlope(double deltaSeconds) {
+    if (deltaSeconds <= 0) return;
+
+    if (slopeStrength <= flatSlopeThreshold) {
+      speed = (speed - (flatFriction * deltaSeconds)).clamp(0.0, maxSpeed);
+      return;
+    }
+
+    final slopeBonus = (slopeStrength - flatSlopeThreshold) * slopeAcceleration;
+    speed = (speed + (slopeBonus * deltaSeconds)).clamp(0.0, maxSpeed);
   }
 
   void startBoost() {
@@ -401,10 +494,10 @@ class _GamePageState extends State<GamePage>
   }
 
   void _changeAngle(GyroscopeEvent event) {
-    double newAgle = (.2 + event.y * .2).abs();
-    if (!angle.isNegative) {
-      angle = newAgle;
-    }
+    angle = (angle + (event.y * slopeSensitivity)).clamp(
+      minSlopeAngle,
+      maxSlopeAngle,
+    );
   }
 
   void pauseGame() {
@@ -430,15 +523,22 @@ class _GamePageState extends State<GamePage>
     _ticker.start();
     isGameOver = false;
     isPaused = false;
+    speed = 5;
+    angle = 0.2;
     coinsRect.clear();
     for (var i = 0; i < 3; i++) {
-      coinsRect.add(Rect.fromLTWH(Get.width, Get.height - 180, 32, 32));
+      coinSlopeOffsets[i] = 0;
+      coinsRect.add(
+        _placeOnSlope(Rect.fromLTWH(Get.width + (44 * i), 0, 32, 32), 0),
+      );
       showCoins[i] = true;
     }
-    obstacleRect = Rect.fromLTWH(Get.width * 2, Get.height - 180, 32, 32);
+    obstacleSlopeOffset = 0;
+    obstacleRect = _placeOnSlope(Rect.fromLTWH(Get.width * 2, 0, 32, 32), 0);
     lastSpawn = Duration.zero;
     boostUntil = Duration.zero;
     lastBoostAt = Duration.zero;
+    lastTick = null;
     setState(() {});
     Get.back();
   }
@@ -496,7 +596,7 @@ class GameOverDialog extends StatelessWidget {
                   ),
                 ],
               ),
-              Text("Time: ${duration.inSeconds}"),
+              Text("Time: ${duration.inSeconds} s"),
               Row(
                 spacing: 24,
                 mainAxisAlignment: MainAxisAlignment.end,
