@@ -479,22 +479,16 @@ class _GamePageState extends State<GamePage>
   }
 
   void jump() async {
-    if (!isGameOver || !isPaused) {
+    if (isGameOver || isPaused) return;
+    setState(() {
+      playerRect = playerRect.shift(Offset(0, -Get.width * .5));
+    });
+    jumpPlayer.play();
+    await Future.delayed(1.seconds);
+    if (mounted) {
       setState(() {
-        playerRect = playerRect.shift(Offset(0, -Get.width * .5));
+        playerRect = Rect.fromLTWH(Get.width * .3, Get.height - 180, 100, 100);
       });
-      jumpPlayer.play();
-      await Future.delayed(1.seconds);
-      if (mounted) {
-        setState(() {
-          playerRect = Rect.fromLTWH(
-            Get.width * .3,
-            Get.height - 180,
-            100,
-            100,
-          );
-        });
-      }
     }
   }
 

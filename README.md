@@ -27,3 +27,12 @@ A new Flutter project.
 ### waarom heb ik dit gemist:
 screen recording is uitdagend, en had er uit eindelijk geen tijd meer voor.
 ik had beter een speed variable kunnen maken voor de slope en de bomen, maar dat werd lastig in mijn huidige implementatie. omdat ik eerst de bomen had gemaakt, volgens de planning. maar toen nog niet rekening gehouden met de snelheid.
+
+
+## compleet
+ - de package name bleek heel makkelijk aan te passen, dus dat was geen probleem, nu weet ik dat!
+ 
+
+ screen recording is niet toegevoegd. hier is waarom:
+ voor screen recording heb ik een package nodig: 'https://pub.dev/packages/flutter_screen_recording'
+ maar die package staat niet in de packages lijst en is ook niet populair of veel gebruikt. dat zorgt er ook voor dat het een kleine kas is dat die package wordt toegevoegt, of die goed werkt. hierdoor heb ik de beslissing genomen om dit niet te doen. als je daar anders naar kijkt. stuur dan een bericht.
